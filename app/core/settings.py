@@ -55,3 +55,6 @@ class RootResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     message: str
+
+
+settings = Settings()
