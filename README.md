@@ -4,7 +4,7 @@ Este projeto demonstra, na prática, o impacto da engenharia de prompts na quali
 
 ---
 
-## 🔹 1. Arquitetura e Separação de Responsabilidades
+## 1. Arquitetura e Separação de Responsabilidades
 
 O sistema foi desenhado com foco em desacoplamento e fail-fast, dividindo as responsabilidades nas seguintes camadas:
 
@@ -29,7 +29,7 @@ O sistema foi desenhado com foco em desacoplamento e fail-fast, dividindo as res
 
 ---
 
-## 🔹 2. Pré-requisitos
+## 2. Pré-requisitos
 
 Para rodar o projeto localmente, sua máquina precisa de:
 
@@ -70,7 +70,7 @@ PORT=8000
 
 ---
 
-## 🔹 4. Instalação e Execução
+## 4. Instalação e Execução
 
 Recomenda-se o uso de um ambiente virtual (`.venv`).
 
@@ -101,7 +101,7 @@ python app/main.py
 
 ---
 
-## 🔹 5. Fluxo de Uso (Workflow)
+## 5. Fluxo de Uso (Workflow)
 
 ### 1. Input
 
@@ -123,3 +123,111 @@ O modelo (Claude) é invocado duas vezes:
 Os resultados são exibidos em duas colunas, permitindo comparação direta e auditoria visual da eficácia da engenharia de prompts.
 
 ---
+
+---
+
+## 6. Uso com Node.js + TypeScript
+
+Para usuários que desejam utilizar o AWS Bedrock com Node.js e TypeScript, abaixo está um exemplo equivalente ao client Python.
+
+### Instalação
+
+```bash
+npm install @aws-sdk/client-bedrock-runtime dotenv
+```
+
+### Implementação
+
+```ts
+import { BedrockRuntimeClient, InvokeModelCommand } from "@aws-sdk/client-bedrock-runtime";
+import * as dotenv from "dotenv";
+
+dotenv.config();
+
+interface Settings {
+  awsAccessKeyId: string;
+  awsSecretAccessKey: string;
+  awsRegion: string;
+}
+
+const settings: Settings = {
+  awsAccessKeyId: process.env.AWS_ACCESS_KEY_ID!,
+  awsSecretAccessKey: process.env.AWS_SECRET_ACCESS_KEY!,
+  awsRegion: process.env.AWS_REGION!,
+};
+
+function buildRefinementPrompt(userPrompt: string): string {
+  return `
+Você é um especialista em engenharia de prompt.
+
+Reescreva o prompt abaixo para torná-lo mais claro, específico e eficaz.
+
+Regras:
+- Preserve a intenção original
+- Adicione contexto relevante
+- Defina formato de saída
+- Reduza ambiguidades
+
+Retorne apenas o prompt refinado.
+
+Prompt original:
+${userPrompt}
+`;
+}
+
+export class BedrockClient {
+  private client: BedrockRuntimeClient;
+
+  constructor() {
+    this.client = new BedrockRuntimeClient({
+      region: settings.awsRegion,
+      credentials: {
+        accessKeyId: settings.awsAccessKeyId,
+        secretAccessKey: settings.awsSecretAccessKey,
+      },
+    });
+  }
+
+  async invoke(prompt: string): Promise<string> {
+    const modelId =
+      process.env.BEDROCK_MODEL_ID ??
+      "global.anthropic.claude-haiku-4-5-20251001-v1:0";
+
+    const body = JSON.stringify({
+      anthropic_version: "bedrock-2023-05-31",
+      messages: [
+        {
+          role: "user",
+          content: prompt,
+        },
+      ],
+    });
+
+    const command = new InvokeModelCommand({
+      modelId,
+      body,
+      contentType: "application/json",
+      accept: "application/json",
+    });
+
+    const response = await this.client.send(command);
+
+    const responseBody = JSON.parse(
+      new TextDecoder().decode(response.body)
+    );
+
+    return responseBody.content[0].text;
+  }
+
+  async refinePrompt(userPrompt: string): Promise<string> {
+    const prompt = buildRefinementPrompt(userPrompt);
+    return this.invoke(prompt);
+  }
+}
+```
+
+### Observações
+
+* O SDK v3 da AWS utiliza arquitetura modular (melhor para bundle size)
+* O `InvokeModelCommand` exige serialização manual do body
+* O parsing da resposta depende do formato específico do modelo (Anthropic neste caso)
