@@ -1,149 +1,125 @@
-# FastAPI Template
+Uma aplicação interativa desenvolvida em Python e Streamlit para experimentação, avaliação e refinamento de prompts utilizando modelos fundacionais através do AWS Bedrock.
 
-📦 Template genérico de API com **FastAPI**, **Pydantic Settings** e suporte cross-platform para setup automático.
-
-Este template oferece uma **estrutura inicial completa** para projetos Python com FastAPI, incluindo:
-
-- Configurações via `.env`
-- Endpoints básicos (`/` e `/health`)
-- Middleware CORS configurável
-- Scripts para setup e execução em **Windows, Linux e macOS**
-- Estrutura pronta para expansão (routers, serviços, core)
+Este projeto demonstra, na prática, o impacto da engenharia de prompts na qualidade das respostas geradas por IA, comparando lado a lado a saída de um prompt "cru" contra um prompt "refinado".
 
 ---
 
-## 🔹 Estrutura do projeto
+## 🔹 1. Arquitetura e Separação de Responsabilidades
 
-```
-fastapi-template/
-├─ app/
-│ ├─ init.py
-│ ├─ main.py # App FastAPI principal
-│ └─ core/
-│ ├─ init.py
-│ └─ settings.py # Configurações da API e modelos Pydantic
-├─ .env # Variáveis de ambiente
-├─ requirements.txt # Dependências do projeto
-├─ setup.sh # Setup Linux/macOS
-├─ setup.ps1 # Setup Windows PowerShell
-├─ setup.bat # Setup Windows CMD
-├─ dev.bat # Roda FastAPI no Windows
-└─ README.md # Documentação
-```
+O sistema foi desenhado com foco em desacoplamento e fail-fast, dividindo as responsabilidades nas seguintes camadas:
+
+### Interface (UI)
+
+* O arquivo `app.py` gerencia o estado da aplicação Streamlit
+* Responsável por formulários de submissão
+* Layout de comparação de resultados lado a lado
+
+### Infraestrutura (AWS)
+
+* Módulo: `app/infra/aws/bedrock_client.py`
+* Encapsula a lógica do `boto3`
+* Isola autenticação e invocação dos modelos da Anthropic (Claude)
+
+### Configuração (Core)
+
+* Módulo: `app/core/settings.py`
+* Utiliza `pydantic-settings`
+* Validação rigorosa das variáveis de ambiente
+* Estratégia fail-fast: falha na inicialização caso credenciais estejam ausentes
 
 ---
 
-## 🔹 Variáveis de ambiente (`.env`)
+## 🔹 2. Pré-requisitos
 
-Exemplo mínimo:
+Para rodar o projeto localmente, sua máquina precisa de:
+
+* **Python**: versão >= 3.12 (definido no `pyproject.toml`)
+* **Credenciais AWS**: usuário IAM com permissão `bedrock:InvokeModel`
+* **Acesso a Modelos**:
+
+  * Modelo padrão: `global.anthropic.claude-haiku-4-5-20251001-v1:0`
+  * Deve estar habilitado no console do AWS Bedrock na região configurada
+
+---
+
+## 🔹 3. Variáveis de Ambiente (.env)
+
+Crie um arquivo `.env` na raiz do projeto.
+
+O Pydantic validará a presença das chaves de infraestrutura.
+
+### Exemplo mínimo viável:
 
 ```env
 # ================================
-# 📌 Identidade da aplicação
+# ☁️ Infraestrutura AWS Bedrock
 # ================================
-APP_NAME="FastAPI Template"
-DESCRIPTION="Template para APIs python com FastAPI"
-ENVIRONMENT=development   # development | production | testing
+AWS_REGION="us-east-1"
+AWS_ACCESS_KEY_ID="sua_access_key"
+AWS_SECRET_ACCESS_KEY="sua_secret_key"
+BEDROCK_MODEL_ID="global.anthropic.claude-haiku-4-5-20251001-v1:0"
 
 # ================================
-# ⚙️ Configurações do servidor
+# 📌 Identidade e Servidor (Opcional)
 # ================================
-HOST=0.0.0.0
+APP_NAME="Prompt Refinement Lab"
+ENVIRONMENT="development"
+HOST="0.0.0.0"
 PORT=8000
-DEBUG=False
-
-# ================================
-# 🌍 CORS
-# ================================
-ALLOWED_ORIGINS=["*"]
-ALLOWED_CREDENTIALS=True
-ALLOWED_METHODS=["*"]
-ALLOWED_HEADERS=["*"]
 ```
 
-> O `Pydantic Settings` mapeia automaticamente essas variáveis para `app.core.settings.Settings`.
+---
 
-___
+## 🔹 4. Instalação e Execução
 
-## 🔹 Scripts de setup
+Recomenda-se o uso de um ambiente virtual (`.venv`).
 
-**Linux/macOS**
+### 1. Instalação das dependências
 
 ```bash
-./setup.sh
+pip install -r requirements.txt
+# ou via uv/poetry se configurado
 ```
 
-- Cria `.venv` se não existir
-- Ativa .venv
-- Atualiza pip
-- Instala dependências
-- Instruções para rodar `uvicorn` no final
+### 2. Iniciando a aplicação Streamlit
 
-**Windows PowerShell**
+Existem duas formas de iniciar o projeto:
 
-```powershell
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\setup.ps1
-```
-
-**Windows CMD**
-
-```cmd
-setup.bat
-```
-
-**Rodar aplicação**
+#### Opção A (Direto pela UI na raiz)
 
 ```bash
-uvicorn app.main:app --reload
+streamlit run app.py
 ```
-___
 
-## 🔹 Endpoints básicos
+#### Opção B (Via orquestrador principal)
 
-| Endpoint | Método |                                              Descrição |
-| :------- | :----: | -----------------------------------------------------: |
-| /        |  GET   | Retorna informações do app e servidor {`RootResponse`} |
-| /health  |  GET   |                 Health check da API {`HealthResponse`} |
-
-**Modelos de resposta**
-
-```json
-// RootResponse
-{
-  "application": {
-    "name": "FastAPI Template",
-    "description": "Template genérico de API",
-    "environment": "development"
-  },
-  "server": {
-    "host": "0.0.0.0",
-    "port": 8000,
-    "debug": false
-  }
-}
-
-// HealthResponse
-{
-  "status": "ok",
-  "message": "O serviço está funcionando corretamente!"
-}
+```bash
+python app/main.py
 ```
-___
 
-## 🔹 Dependências principais
+> Nota: Se utilizar o `main.py`, verifique se o caminho do `subprocess.run` aponta corretamente para o arquivo Streamlit.
 
-- FastAPI
-- Uvicorn
-- Pydantic Settings
-- Python >= 3.12
+---
 
-___
+## 🔹 5. Fluxo de Uso (Workflow)
 
-## 🔹 Dependências principais
+### 1. Input
 
-- `.venv` isolado do sistema
-- Configuração CORS pronta para uso
-- Separação clara entre core, routers, services
-- Script cross-plataform para setup rápido
-- Preparado para expansão modular
+O usuário insere um comando base na interface.
+
+### 2. Refinamento
+
+O `BedrockClient` intercepta o texto e aplica um prompt de sistema especializado para aprimorar a instrução original.
+
+### 3. Invocação Paralela
+
+O modelo (Claude) é invocado duas vezes:
+
+* Uma com o prompt original
+* Outra com o prompt refinado
+
+### 4. Análise
+
+Os resultados são exibidos em duas colunas, permitindo comparação direta e auditoria visual da eficácia da engenharia de prompts.
+
+---
