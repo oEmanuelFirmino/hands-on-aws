@@ -22,6 +22,11 @@ class Settings(BaseSettings):
     allowed_methods: list[str] = ["*"]
     allowed_headers: list[str] = ["*"]
 
+    aws_region: str
+    aws_access_key_id: str
+    aws_secret_access_key: str
+    bedrock_model_id: str
+
     class Config:
         env_file: str = ".env"
         env_file_encoding: str = "utf-8"
@@ -50,3 +55,6 @@ class RootResponse(BaseModel):
 class HealthResponse(BaseModel):
     status: str
     message: str
+
+
+settings = Settings()
